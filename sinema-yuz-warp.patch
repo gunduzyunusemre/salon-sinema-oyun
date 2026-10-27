@@ -1,0 +1,434 @@
+From 9a7091d2248dc6637c5aef4edc977e726ef9f620 Mon Sep 17 00:00:00 2001
+From: c <c@c>
+Date: Tue, 27 Oct 2026 10:29:21 +0000
+Subject: [PATCH] =?UTF-8?q?=F0=9F=8E=AC=20Sinema:=20y=C3=BCz=20noktalar?=
+ =?UTF-8?q?=C4=B1yla=20y=C3=BCz=C3=BC=20karakterin=20ba=C5=9F=C4=B1na=20b?=
+ =?UTF-8?q?=C3=BCk?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ BENIOKU.md             |   2 +-
+ README.md              |   2 +-
+ public/games/sinema.js | 211 +++++++++++++++++++++++++++++++++++------
+ server/games/sinema.js |  20 ++--
+ 4 files changed, 197 insertions(+), 38 deletions(-)
+
+diff --git a/BENIOKU.md b/BENIOKU.md
+index f8c6adb..85d5c8d 100644
+--- a/BENIOKU.md
++++ b/BENIOKU.md
+@@ -52,7 +52,7 @@ Kurucu 30 saniyeden uzun süre bağlı değilse kurucu rolü sıradaki kişiye g
+ - Perde sesini sağ üstteki 🔊 kaydırıcısıyla kısabilirsin. ⛶ salonu tam ekran yapar.
+ - Konuşan kişinin ayağının altında halka yanar, adı renklenir. 😀 tepkileri karakterin başının üstünde de çıkar.
+ 
+-**Yüz nasıl bulunur?** Herkes yüzünü kendi cihazında bulur ([MediaPipe](https://ai.google.dev/edge/mediapipe), ilk açılışta internetten yüklenir). Sunucuya ve diğerlerine yalnızca yüzün kameradaki **yeri** gider. İzleyenler zaten aldıkları kamera görüntüsünü bu yere göre kırpıp karaktere kaplar, yani ayrıca görüntü gönderilmez. MediaPipe yüklenemezse tarayıcının kendi yüz bulucusu, o da yoksa görüntünün ortası kullanılır.
++**Yüz nasıl oturur?** Herkes yüzünü kendi cihazında bulur ([MediaPipe FaceLandmarker](https://ai.google.dev/edge/mediapipe), ilk açılışta internetten yüklenir): gözler, kaşlar, burun, ağız ve yüz çevresinden 71 nokta. Diğerlerine yalnızca bu noktalar gider (yaklaşık 0,5 KB). İzleyenler zaten aldıkları kamera görüntüsünü bu noktalardan kurulan üçgen ağıyla karakterin başına büker: gözler hizalanır, baş eğik olsa da yüz düz durur, kenarlar yumuşatılır ve başın derisi kişinin ten rengine boyanır. Noktalar bulunamazsa yüz kutusuyla kırpılır, o da yoksa görüntünün ortası kullanılır.
+ 
+ ## Cihaz ve tarayıcı desteği
+ 
+diff --git a/README.md b/README.md
+index f8c6adb..85d5c8d 100644
+--- a/README.md
++++ b/README.md
+@@ -52,7 +52,7 @@ Kurucu 30 saniyeden uzun süre bağlı değilse kurucu rolü sıradaki kişiye g
+ - Perde sesini sağ üstteki 🔊 kaydırıcısıyla kısabilirsin. ⛶ salonu tam ekran yapar.
+ - Konuşan kişinin ayağının altında halka yanar, adı renklenir. 😀 tepkileri karakterin başının üstünde de çıkar.
+ 
+-**Yüz nasıl bulunur?** Herkes yüzünü kendi cihazında bulur ([MediaPipe](https://ai.google.dev/edge/mediapipe), ilk açılışta internetten yüklenir). Sunucuya ve diğerlerine yalnızca yüzün kameradaki **yeri** gider. İzleyenler zaten aldıkları kamera görüntüsünü bu yere göre kırpıp karaktere kaplar, yani ayrıca görüntü gönderilmez. MediaPipe yüklenemezse tarayıcının kendi yüz bulucusu, o da yoksa görüntünün ortası kullanılır.
++**Yüz nasıl oturur?** Herkes yüzünü kendi cihazında bulur ([MediaPipe FaceLandmarker](https://ai.google.dev/edge/mediapipe), ilk açılışta internetten yüklenir): gözler, kaşlar, burun, ağız ve yüz çevresinden 71 nokta. Diğerlerine yalnızca bu noktalar gider (yaklaşık 0,5 KB). İzleyenler zaten aldıkları kamera görüntüsünü bu noktalardan kurulan üçgen ağıyla karakterin başına büker: gözler hizalanır, baş eğik olsa da yüz düz durur, kenarlar yumuşatılır ve başın derisi kişinin ten rengine boyanır. Noktalar bulunamazsa yüz kutusuyla kırpılır, o da yoksa görüntünün ortası kullanılır.
+ 
+ ## Cihaz ve tarayıcı desteği
+ 
+diff --git a/public/games/sinema.js b/public/games/sinema.js
+index d01201c..72c269c 100644
+--- a/public/games/sinema.js
++++ b/public/games/sinema.js
+@@ -3,10 +3,10 @@
+  * Herkesin bir karakteri var; kamerası açık olanın yüzü karakterin yüzüne geçer.
+  * Yayıncı bir sekme paylaşır, görüntü perdede oynar. Koltuğa tıklayınca oturulur.
+  *
+- * Yüz tespiti: herkes kendi kamerasında yüzünü bulur (MediaPipe, yoksa tarayıcının
+- * FaceDetector'u, o da yoksa ortadan kırpma) ve sadece yüzün yerini (0–1 kutu)
+- * gönderir. İzleyenler zaten gelen kamera görüntüsünü o kutuya göre kırpıp
+- * karakterin yüzüne kaplar. Görüntü ayrıca gönderilmez.
++ * Yüz: herkes kendi kamerasında yüzünün 71 noktasını bulur (MediaPipe FaceLandmarker)
++ * ve sadece bu noktaları gönderir. İzleyenler zaten gelen kamera görüntüsünü bu
++ * noktalardan kurulan üçgen ağıyla karakterin başına büker (warp). Görüntü ayrıca
++ * gönderilmez. Noktalar bulunamazsa yüz kutusuyla kırpılır, o da yoksa ortadan.
+  */
+ (function(){
+ 'use strict';
+@@ -15,6 +15,56 @@ const isTouch=matchMedia('(hover: none)').matches;
+ const MP_VER='0.10.14';
+ const MP_CDN='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@'+MP_VER;
+ const MP_MODEL='https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite';
++const MP_LM_MODEL='https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
++
++/* ---------- Yüz ağı ----------
++   MediaPipe yüz noktalarından seçilenler ve her birinin "ortalama yüz" üzerindeki
++   yeri (göz bebekleri arası = 1 birim, y aşağı doğru). Bu şablon üçgen ağını bir
++   kez kurmak ve baş çevrildiğinde yüzü toparlamak için kullanılır. */
++const FACE_OVAL=[10,338,297,332,284,251,389,356,454,323,361,288,397,365,379,378,400,377,152,148,176,149,150,136,172,58,132,93,234,127,162,21,54,103,67,109];
++const FACE_INNER={
++  33:[-.75,0],133:[-.25,0],159:[-.5,-.09],145:[-.5,.08],362:[.25,0],263:[.75,0],386:[.5,-.09],374:[.5,.08], // gözler
++  70:[-.85,-.3],105:[-.55,-.4],107:[-.2,-.33],300:[.85,-.3],334:[.55,-.4],336:[.2,-.33],                   // kaşlar
++  151:[0,-.62],9:[0,-.25],168:[0,-.05],6:[0,.15],1:[0,.62],2:[0,.76],98:[-.2,.7],327:[.2,.7],             // alın, burun
++  61:[-.4,1.05],291:[.4,1.05],0:[0,.93],37:[-.17,.95],267:[.17,.95],13:[0,1.02],14:[0,1.08],             // ağız
++  17:[0,1.22],84:[-.17,1.19],314:[.17,1.19],199:[0,1.45],50:[-.68,.55],280:[.68,.55],                    // çene, yanaklar
++};
++const LM_IDX=[...FACE_OVAL,...Object.keys(FACE_INNER).map(Number)];   // gönderilen 71 nokta
++const NO=FACE_OVAL.length,NL=LM_IDX.length,NV=NL+NO;                    // + dışta yumuşak kenar halkası
++const RING=1.22;                                                        // kenar halkası yüz çevresinden ne kadar dışarıda
++const FACE_S=0.13,FACE_EYE_Y=0.03,HEAD_R={x:0.21,y:0.248,z:0.215};      // yüzün baştaki ölçüsü (m)
++const LM_EYES={r:[LM_IDX.indexOf(33),LM_IDX.indexOf(133)],l:[LM_IDX.indexOf(362),LM_IDX.indexOf(263)]};
++const LM_SKIN=[LM_IDX.indexOf(50),LM_IDX.indexOf(280),LM_IDX.indexOf(151)];
++const TEMPLATE=(()=>{
++  const t=FACE_OVAL.map((_,k)=>{const a=2*Math.PI*k/NO;return[1.1*Math.sin(a),0.4-1.4*Math.cos(a)]});
++  for(const k in FACE_INNER)t.push(FACE_INNER[k]);
++  for(let k=0;k<NO;k++)t.push([t[k][0]*RING,0.4+(t[k][1]-0.4)*RING]);
++  return t;
++})();
++let FACE_TRIS=null;
++function delaunay(P){
++  // Bowyer–Watson: küçük nokta kümesi için yeterince hızlı, bir kez çalışır
++  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;P.forEach(([x,y])=>{x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y)});
++  const d=Math.max(x1-x0,y1-y0)*20,mx=(x0+x1)/2,my=(y0+y1)/2,n=P.length;
++  const pts=P.concat([[mx-d,my-d],[mx,my+d],[mx+d,my-d]]);
++  const circ=(a,b,c)=>{
++    const [ax,ay]=pts[a],[bx,by]=pts[b],[cx,cy]=pts[c],D=2*(ax*(by-cy)+bx*(cy-ay)+cx*(ay-by));
++    const ux=((ax*ax+ay*ay)*(by-cy)+(bx*bx+by*by)*(cy-ay)+(cx*cx+cy*cy)*(ay-by))/D;
++    const uy=((ax*ax+ay*ay)*(cx-bx)+(bx*bx+by*by)*(ax-cx)+(cx*cx+cy*cy)*(bx-ax))/D;
++    return{a,b,c,x:ux,y:uy,r:(ax-ux)**2+(ay-uy)**2};
++  };
++  let tris=[circ(n,n+1,n+2)];
++  for(let i=0;i<n;i++){
++    const [px,py]=pts[i],bad=[],keep=[];
++    tris.forEach(t=>((px-t.x)**2+(py-t.y)**2<t.r?bad:keep).push(t));
++    const edges=new Map();
++    bad.forEach(t=>[[t.a,t.b],[t.b,t.c],[t.c,t.a]].forEach(([u,v])=>{const k=u<v?u+','+v:v+','+u;edges.set(k,edges.has(k)?null:[u,v])}));
++    tris=keep;
++    edges.forEach(e=>{if(e)tris.push(circ(e[0],e[1],i))});
++  }
++  return tris.filter(t=>t.a<n&&t.b<n&&t.c<n).flatMap(t=>[t.a,t.b,t.c]);
++}
++function faceTris(){return FACE_TRIS||(FACE_TRIS=delaunay(TEMPLATE))}
+ 
+ /* ---------- Salonun ölçüleri (sunucudaki koltuk sayısıyla aynı) ---------- */
+ const ROOM={x:7,front:-10,back:10,h:7};
+@@ -245,7 +295,7 @@ function onAsk(pid){
+    YÜZ TESPİTİ — sadece kendi kameramda çalışır
+    ===================================================================== */
+ const FD={
+-  det:null,kind:'',loading:null,failed:false,video:null,timer:null,box:null,miss:0,sentAt:0,sent:undefined,busy:false,
++  det:null,kind:'',loading:null,failed:false,video:null,timer:null,box:null,lm:null,miss:0,sentAt:0,sent:undefined,busy:false,
+   async load(){
+     if(this.det||this.failed)return;
+     if(this.loading)return this.loading;
+@@ -253,8 +303,13 @@ const FD={
+       try{
+         const m=await import(MP_CDN+'/vision_bundle.mjs');
+         const files=await m.FilesetResolver.forVisionTasks(MP_CDN+'/wasm');
+-        const make=delegate=>m.FaceDetector.createFromOptions(files,{baseOptions:{modelAssetPath:MP_MODEL,delegate},runningMode:'VIDEO',minDetectionConfidence:0.5});
+-        try{this.det=await make('GPU')}catch(e){this.det=await make('CPU')}
++        // Önce yüz noktaları (warp için), olmazsa yalnızca yüz kutusu
++        const tryBoth=async make=>{try{return await make('GPU')}catch(e){return await make('CPU')}};
++        try{
++          this.det=await tryBoth(delegate=>m.FaceLandmarker.createFromOptions(files,{baseOptions:{modelAssetPath:MP_LM_MODEL,delegate},runningMode:'VIDEO',numFaces:1,minFaceDetectionConfidence:0.5,minTrackingConfidence:0.5}));
++          this.kind='lm';return;
++        }catch(e){console.warn('FaceLandmarker açılamadı, yüz kutusu kullanılacak',e)}
++        this.det=await tryBoth(delegate=>m.FaceDetector.createFromOptions(files,{baseOptions:{modelAssetPath:MP_MODEL,delegate},runningMode:'VIDEO',minDetectionConfidence:0.5}));
+         this.kind='mp';return;
+       }catch(e){console.warn('MediaPipe yüklenemedi',e)}
+       try{
+@@ -274,12 +329,12 @@ const FD={
+     if(this.video.srcObject!==A.cam.stream)this.video.srcObject=A.cam.stream;
+     this.video.play().catch(()=>{});
+     this.load();
+-    this.timer=setInterval(()=>this.step(),130);
++    this.timer=setInterval(()=>this.step(),110);
+   },
+   stop(){
+-    clearInterval(this.timer);this.timer=null;this.box=null;this.miss=0;
++    clearInterval(this.timer);this.timer=null;this.box=null;this.lm=null;this.miss=0;
+     if(this.video){this.video.srcObject=null}
+-    if(this.sent!==null&&this.sent!==undefined){A.send({t:'face',b:null})}
++    if(this.sent!==null&&this.sent!==undefined){A.send({t:'face'})}
+     this.sent=undefined;
+   },
+   async step(){
+@@ -288,10 +343,14 @@ const FD={
+     if(v.srcObject!==A.cam.stream){v.srcObject=A.cam.stream;v.play().catch(()=>{})}
+     if(!this.det||this.busy||v.readyState<2||!v.videoWidth)return;
+     const vw=v.videoWidth,vh=v.videoHeight;
+-    let bb=null;
++    let bb=null,lm=null;
+     this.busy=true;
+     try{
+-      if(this.kind==='mp'){
++      if(this.kind==='lm'){
++        const r=this.det.detectForVideo(v,performance.now());
++        const f=r&&r.faceLandmarks&&r.faceLandmarks[0];
++        if(f&&f.length>=468){lm=new Float32Array(NL*2);LM_IDX.forEach((k,i)=>{lm[i*2]=f[k].x;lm[i*2+1]=f[k].y})}
++      }else if(this.kind==='mp'){
+         const r=this.det.detectForVideo(v,performance.now());
+         let best=null;
+         (r&&r.detections||[]).forEach(d=>{const b=d.boundingBox;if(b&&(!best||b.width*b.height>best.width*best.height))best=b});
+@@ -302,21 +361,30 @@ const FD={
+       }
+     }catch(e){/* tek kare atlanabilir */}
+     this.busy=false;
+-    if(bb){
++    if(lm){
++      this.miss=0;
++      // Titremeyi azalt: yeni noktaya yarı yarıya yaklaş
++      if(this.lm)for(let i=0;i<lm.length;i++)this.lm[i]=lerp(this.lm[i],lm[i],0.6);else this.lm=lm;
++    }else if(bb){
+       bb=bb.map(x=>clamp(x,0,1));
+       this.miss=0;
+       this.box=this.box?this.box.map((x,i)=>lerp(x,bb[i],0.55)):bb;
+-    }else if(++this.miss>20){this.box=null} // ~3 saniye yüz yoksa ortadan kırp
++    }else if(++this.miss>25){this.box=null;this.lm=null} // ~3 saniye yüz yoksa ortadan kırp
+     this.publish();
+   },
+   publish(){
+-    const now=Date.now(),b=this.box;
+-    if(now-this.sentAt<200)return;
+-    const prev=this.sent;
+-    const changed=!b!==!prev||(b&&prev&&b.some((x,i)=>Math.abs(x-prev[i])>0.012));
+-    if(!changed&&prev!==undefined)return;
+-    this.sentAt=now;this.sent=b?b.map(x=>Math.round(x*1000)/1000):null;
+-    A.send({t:'face',b:this.sent});
++    const now=Date.now();
++    if(now-this.sentAt<130)return;
++    let msg;
++    if(this.lm)msg={lm:Array.from(this.lm,x=>Math.round(clamp(x,-0.3,1.3)*1000))};
++    else if(this.box)msg={b:this.box.map(x=>Math.round(x*1000)/1000)};
++    else msg={};
++    const key=msg.lm?'lm':msg.b?'b':'';
++    const prev=this.sent,arr=msg.lm||msg.b;
++    const changed=prev===undefined||(prev?prev.key:'')!==key||(arr&&prev.arr.some((x,i)=>Math.abs(x-arr[i])>(msg.lm?3:0.012)));
++    if(!changed)return;
++    this.sentAt=now;this.sent=key?{key,arr}:null;
++    A.send({t:'face',...msg});
+   },
+ };
+ 
+@@ -517,6 +585,7 @@ function makeAvatar(pid){
+     sho.add(arm,hand);sho.rotation.z=sd*0.08;g.add(sho);arms.push(sho);
+   });
+   const head=new T.Group();head.position.y=1.74;
++  const shape=new T.Group();shape.scale.set(1,HEAD_R.y/0.21,HEAD_R.z/0.21); // hafif oval baş, yüze daha iyi oturur
+   const skull=new T.Mesh(G_(new T.SphereGeometry(0.21,24,18)),skin);
+   // Yüz: başın önündeki kavisli parça, kameradan kırpılan görüntü buraya kaplanır
+   const fc=document.createElement('canvas');fc.width=fc.height=160;
+@@ -525,14 +594,25 @@ function makeAvatar(pid){
+   const face=new T.Mesh(G_(new T.SphereGeometry(0.2135,28,20,Math.PI/2-1.12,2.24,0.5,1.55)),faceMat);
+   const hair1=new T.Mesh(G_(new T.SphereGeometry(0.222,22,12,0,Math.PI*2,0,0.62)),hairM);
+   const hair2=new T.Mesh(G_(new T.SphereGeometry(0.222,22,14,Math.PI/2+1.05,Math.PI*2-2.1,0,1.95)),hairM);
+-  head.add(skull,face,hair1,hair2);g.add(torso,head);
++  shape.add(skull,face,hair1,hair2);
++  // Bükülen yüz: noktaları her karede kameradaki yüze göre güncellenen üçgen ağı
++  const wg=new T.BufferGeometry();
++  wg.setAttribute('position',new T.BufferAttribute(new Float32Array(NV*3),3).setUsage(T.DynamicDrawUsage));
++  wg.setAttribute('uv',new T.BufferAttribute(new Float32Array(NV*2),2).setUsage(T.DynamicDrawUsage));
++  const col=new Float32Array(NV*4);for(let i=0;i<NV;i++){col.set([1,1,1,i<NO?0.9:i<NL?1:0],i*4)} // dış halka saydam: kenar yumuşak
++  wg.setAttribute('color',new T.BufferAttribute(col,4));
++  wg.setIndex(faceTris());G_(wg);
++  const warpMat=new T.MeshBasicMaterial({vertexColors:true,transparent:true,depthWrite:false,toneMapped:false,side:T.DoubleSide,color:0xe8e8e8});
++  const warp=new T.Mesh(wg,warpMat);warp.visible=false;warp.frustumCulled=false;warp.renderOrder=2;
++  head.add(shape,warp);g.add(torso,head);
+   const ring=new T.Mesh(G_(new T.RingGeometry(0.36,0.46,32)),new T.MeshBasicMaterial({color,transparent:true,opacity:.85,side:T.DoubleSide}));
+   ring.rotation.x=-Math.PI/2;ring.position.y=0.03;ring.visible=false;g.add(ring);
+   const tag=makeLabel(pid);tag.position.y=2.16;g.add(tag);
+   W.scene.add(g);
+   const P=A.R&&A.R.players.find(x=>x.id===pid);
+-  const av={pid,g,legs,shins,arms,head,ring,tag,mats:[skin,cloth,pants,dark,hairM,faceMat,ring.material],geos,
+-    face:{canvas:fc,ctx:fc.getContext('2d'),tex:ftex,mode:'',video:null,stream:null,crop:null},
++  const av={pid,g,legs,shins,arms,head,ring,tag,mats:[skin,cloth,pants,dark,hairM,faceMat,warpMat,ring.material],geos,
++    face:{canvas:fc,ctx:fc.getContext('2d'),tex:ftex,mode:'',video:null,stream:null,crop:null,
++      cap:face,warp,warpMat,vtex:null,skin,skin0:skin.color.clone(),skinAt:0,uv:null,pos:null},
+     cur:{x:0,z:0,y:0,r:Math.PI},tgt:null,walkT:Math.random()*6,speed:0,seated:-1,name:P?P.name:'',color:P?P.color:''};
+   drawCartoon(av.face);
+   return av;
+@@ -560,6 +640,7 @@ function removeAvatar(pid){
+   W.scene.remove(av.g);
+   av.geos.forEach(g=>g.dispose());av.mats.forEach(m=>m.dispose());
+   av.face.tex.dispose();av.tag.material.map.dispose();av.tag.material.dispose();
++  if(av.face.vtex)av.face.vtex.dispose();
+   if(av.face.video){av.face.video.srcObject=null;av.face.video.remove()}
+   delete W.av[pid];
+ }
+@@ -577,6 +658,7 @@ function drawCartoon(F){
+   c.strokeStyle='#2a1a22';c.lineWidth=S*.03;c.lineCap='round';
+   c.beginPath();c.arc(S*.5,S*.55,S*.1,0.2*Math.PI,0.8*Math.PI);c.stroke();
+   F.tex.needsUpdate=true;F.mode='cartoon';
++  showWarp(F,false);
+ }
+ function drawCamFace(F,video,box){
+   const vw=video.videoWidth,vh=video.videoHeight,c=F.ctx,S=F.canvas.width;
+@@ -596,6 +678,7 @@ function drawCamFace(F,video,box){
+   const g=c.createRadialGradient(S/2,S/2,S*.33,S/2,S/2,S*.5);g.addColorStop(0,'rgba(0,0,0,1)');g.addColorStop(1,'rgba(0,0,0,0)');
+   c.globalCompositeOperation='destination-in';c.fillStyle=g;c.fillRect(0,0,S,S);c.globalCompositeOperation='source-over';
+   F.tex.needsUpdate=true;F.mode='cam';
++  showWarp(F,false);
+ }
+ function camStreamOf(pid){
+   if(pid===A.me)return A.cam.on?A.cam.stream:null;
+@@ -608,14 +691,82 @@ function syncFaceSource(av){
+   if(st===F.stream)return;
+   F.stream=st;F.crop=null;
+   if(!st){if(F.video)F.video.srcObject=null;drawCartoon(F);return}
+-  if(!F.video){const v=document.createElement('video');v.muted=true;v.autoplay=true;v.playsInline=true;v.setAttribute('playsinline','');E.media.appendChild(v);F.video=v}
++  if(!F.video){
++    const v=document.createElement('video');v.muted=true;v.autoplay=true;v.playsInline=true;v.setAttribute('playsinline','');E.media.appendChild(v);F.video=v;
++    F.vtex=new W.T.VideoTexture(v);F.vtex.encoding=W.T.sRGBEncoding;F.warpMat.map=F.vtex;F.warpMat.needsUpdate=true;
++  }
+   F.video.srcObject=st;F.video.play().catch(()=>{});
+ }
++function showWarp(F,on){
++  F.warp.visible=on;F.cap.visible=!on;
++  if(!on&&F.uv){F.uv=null;F.pos=null;F.skin.color.copy(F.skin0)}
++}
++function faceLm(pid){
++  if(pid===A.me)return FD.lm;
++  const f=G&&G.face&&G.face[pid];
++  return f&&f.lm?f.lm.map(v=>v/1000):null;
++}
++/* Kameradaki yüz noktalarını karakterin başına bük.
++   uv: noktaların kamera görüntüsündeki yeri (dokudan nereyi alacağız).
++   pos: aynı noktaların baştaki yeri. Gözler hizalanıp ölçeklenir (baş eğilse de
++   yüz düz durur), şablonla biraz karıştırılır, sonra oval başın yüzeyine sarılır. */
++function drawWarpFace(F,video,lm,now){
++  const vw=video.videoWidth,vh=video.videoHeight;
++  const px=i=>lm[i*2]*vw,py=i=>lm[i*2+1]*vh;
++  const rx=(px(LM_EYES.r[0])+px(LM_EYES.r[1]))/2,ry=(py(LM_EYES.r[0])+py(LM_EYES.r[1]))/2;
++  const lx=(px(LM_EYES.l[0])+px(LM_EYES.l[1]))/2,ly=(py(LM_EYES.l[0])+py(LM_EYES.l[1]))/2;
++  const cx=(rx+lx)/2,cy=(ry+ly)/2,dx=lx-rx,dy=ly-ry,dist=Math.hypot(dx,dy);
++  if(dist<4){showWarp(F,false);return false}
++  const co=dx/dist,si=dy/dist;
++  const uvT=new Float32Array(NV*2),dT=new Float32Array(NV*2);
++  for(let i=0;i<NL;i++){
++    const x=px(i)-cx,y=py(i)-cy;
++    const ax=(x*co+y*si)/dist,ay=(-x*si+y*co)/dist;
++    dT[i*2]=lerp(TEMPLATE[i][0],ax,0.72);dT[i*2+1]=lerp(TEMPLATE[i][1],ay,0.72);
++    uvT[i*2]=lm[i*2];uvT[i*2+1]=1-lm[i*2+1];
++  }
++  // Dış halka: başta yüz çevresinin biraz dışına uzanır ve saydamlaşır (kenar yumuşar).
++  // Doku ise yüzün içinden alınır; böylece kenarda arka plan ya da saç görünmez.
++  let ux=0,uy=0,dxm=0,dym=0;
++  for(let k=0;k<NO;k++){ux+=uvT[k*2];uy+=uvT[k*2+1];dxm+=dT[k*2];dym+=dT[k*2+1]}
++  ux/=NO;uy/=NO;dxm/=NO;dym/=NO;
++  for(let k=0;k<NO;k++){
++    const o=(NL+k)*2,ox=uvT[k*2]-ux,oy=uvT[k*2+1]-uy;
++    uvT[k*2]=ux+ox*0.95;uvT[k*2+1]=uy+oy*0.95;       // çene/şakak çizgisinde arka planı alma
++    uvT[o]=ux+ox*0.86;uvT[o+1]=uy+oy*0.86;
++    dT[o]=dxm+(dT[k*2]-dxm)*RING;dT[o+1]=dym+(dT[k*2+1]-dym)*RING;
++  }
++  if(!F.uv){F.uv=uvT;F.pos=dT}
++  else for(let i=0;i<NV*2;i++){F.uv[i]=lerp(F.uv[i],uvT[i],0.6);F.pos[i]=lerp(F.pos[i],dT[i],0.6)}
++  const g=F.warp.geometry,P=g.attributes.position.array,U=g.attributes.uv.array;
++  for(let i=0;i<NV;i++){
++    const X=F.pos[i*2]*FACE_S,Y=FACE_EYE_Y-F.pos[i*2+1]*FACE_S;
++    const q=1-(X/HEAD_R.x)**2-(Y/HEAD_R.y)**2;
++    P[i*3]=X;P[i*3+1]=Y;P[i*3+2]=HEAD_R.z*Math.sqrt(Math.max(q,0.003))+0.005;
++    U[i*2]=F.uv[i*2];U[i*2+1]=F.uv[i*2+1];
++  }
++  g.attributes.position.needsUpdate=true;g.attributes.uv.needsUpdate=true;
++  showWarp(F,true);F.mode='warp';
++  // Başın derisini kişinin ten rengine boya ki yüzün kenarı belli olmasın
++  if(now-F.skinAt>700){
++    F.skinAt=now;
++    try{
++      const c=W.sctx;let r=0,gg=0,b=0;
++      LM_SKIN.forEach(i=>{c.drawImage(video,px(i)-5,py(i)-5,10,10,0,0,1,1);const d=c.getImageData(0,0,1,1).data;r+=d[0];gg+=d[1];b+=d[2]});
++      F.skin.color.setRGB(r/3/255*0.95,gg/3/255*0.95,b/3/255*0.95).convertSRGBToLinear();
++    }catch(e){}
++  }
++  return true;
++}
+ function updateFaces(){
++  const now=performance.now();
+   for(const pid in W.av){
+     const av=W.av[pid],F=av.face,v=F.video;
+     if(F.stream&&v&&v.readyState>=2&&v.videoWidth){
+-      const box=pid===A.me?FD.box:(G&&G.face&&G.face[pid])||null;
++      const lm=faceLm(pid);
++      if(lm&&lm.length===NL*2&&drawWarpFace(F,v,lm,now))continue;
++      const f=pid===A.me?null:G&&G.face&&G.face[pid];
++      const box=pid===A.me?FD.box:(f&&f.b)||null;
+       drawCamFace(F,v,box);
+     }else if(F.mode!=='cartoon')drawCartoon(F);
+   }
+@@ -917,7 +1068,7 @@ function updateFx(dt){
+ }
+ 
+ /* ---------- Kayıt ---------- */
+-if(window.__salon)window.__salon.sinema=()=>({W,G,FD}); // hata ayıklama için
++if(window.__salon)window.__salon.sinema=()=>({W,G,FD,TEMPLATE}); // hata ayıklama için
+ A.register({
+   id:'sinema',title:'Sinema',icon:'🎬',color:'#e0a100',css:'cn',maxPlayers:8,
+   blurb:'3B bir sinema salonu. Karakterinle dolaş, koltuğuna otur, biri sekmesini perdeye yansıtsın.',
+@@ -932,7 +1083,11 @@ A.register({
+         if(W&&W.av[m.pid])W.av[m.pid].tgt={x:m.x,z:m.z,r:m.r,w:m.w};
+         break;
+       }
+-      case 'face':{if(!G)break;G.face=G.face||{};if(m.b)G.face[m.pid]=m.b;else delete G.face[m.pid];break}
++      case 'face':{
++        if(!G)break;G.face=G.face||{};
++        if(m.lm)G.face[m.pid]={lm:m.lm};else if(m.b)G.face[m.pid]={b:m.b};else delete G.face[m.pid];
++        break;
++      }
+       case 'ask':onAsk(m.pid);break;
+     }
+   },
+diff --git a/server/games/sinema.js b/server/games/sinema.js
+index af150ee..a3a22cc 100644
+--- a/server/games/sinema.js
++++ b/server/games/sinema.js
+@@ -11,6 +11,7 @@
+ const w2g = require('./w2g');
+ 
+ const SEATS = 24;             // 3 sıra × 8 koltuk (istemcideki yerleşimle aynı)
++const LM_LEN = 142;         // 71 yüz noktası × (x, y), istemcideki listeyle aynı
+ const BOUNDS = { x: 6.6, zMin: -6.4, zMax: 9.4 };
+ const num = (v, lo, hi) => (typeof v === 'number' && isFinite(v) ? Math.round(Math.max(lo, Math.min(hi, v)) * 100) / 100 : null);
+ 
+@@ -30,7 +31,7 @@ module.exports = {
+       presenter: room.host, shareCid: null, presAway: 0,
+       seats: {},   // koltuk no → kişi
+       pos: {},     // kişi → {x, z, r, w}
+-      face: {},    // kişi → [x, y, w, h] (kamera görüntüsünde yüzün yeri, 0–1)
++      face: {},    // kişi → {lm: [...]} yüz noktaları ya da {b: [x, y, w, h]} kutu (kamera görüntüsünde, 0–1)
+     };
+   },
+ 
+@@ -58,14 +59,17 @@ module.exports = {
+       }
+ 
+       case 'face': {
+-        if (api.tooFast(ws, 'face', 120)) return;
+-        let b = null;
+-        if (Array.isArray(m.b) && m.b.length === 4) {
+-          b = m.b.map((v) => num(v, 0, 1));
+-          if (b.some((v) => v === null) || b[2] < 0.02 || b[3] < 0.02) b = null;
++        // Yüzün kameradaki yeri: ya yüz noktaları (lm, binde bir birimle tam sayı) ya da kutu (b)
++        if (api.tooFast(ws, 'face', 100)) return;
++        let f = null;
++        if (Array.isArray(m.lm) && m.lm.length === LM_LEN && m.lm.every((v) => Number.isInteger(v) && v >= -300 && v <= 1300)) {
++          f = { lm: m.lm };
++        } else if (Array.isArray(m.b) && m.b.length === 4) {
++          const b = m.b.map((v) => num(v, 0, 1));
++          if (!b.some((v) => v === null) && b[2] >= 0.02 && b[3] >= 0.02) f = { b };
+         }
+-        if (b) g.face[me.id] = b; else delete g.face[me.id];
+-        return api.broadcast(room, { t: 'face', pid: me.id, b }, ws);
++        if (f) g.face[me.id] = f; else delete g.face[me.id];
++        return api.broadcast(room, { t: 'face', pid: me.id, ...(f || {}) }, ws);
+       }
+ 
+       case 'sit': {
+-- 
+2.43.0
+

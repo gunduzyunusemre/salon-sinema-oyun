@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Salon</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛋️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<!-- Ana ekran -->
+<main id="home" class="screen scroll">
+  <div class="inner">
+    <header class="brand">
+      <div class="tiles-logo" aria-label="Salon">
+        <span style="background:#ff4d6d;--rot:-6deg">S</span><span style="background:#ffbf1f;--rot:4deg;color:#1d1846">A</span><span style="background:#5b4dff;--rot:-3deg">L</span><span style="background:#19b394;--rot:5deg">O</span><span style="background:#2fa4ff;--rot:-4deg">N</span>
+      </div>
+      <p>Arkadaşlarını tek odaya topla. Konuşun, kameranızı açın, sonra birlikte bir şey yapın.</p>
+      <div class="acts"><span>📺 Sekme Partisi</span><span>🔁 Tersine</span><span>🧩 Yapboz</span><span>🎬 Sinema</span></div>
+    </header>
+    <div class="invited hidden" id="invited"></div>
+    <section class="card">
+      <h2>Adın</h2>
+      <input type="text" id="nameIn" maxlength="14" placeholder="Takma adın" autocomplete="nickname">
+    </section>
+    <div id="createBox">
+      <button class="btn sun big" id="createBtn" type="button">Yeni salon kur</button>
+      <div class="or">ya da</div>
+    </div>
+    <section class="card">
+      <h2>Salona katıl</h2>
+      <input type="text" id="codeIn" maxlength="4" placeholder="KOD" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Salon kodu">
+      <button class="btn soft wide" id="joinBtn" type="button" style="margin-top:10px">Katıl</button>
+    </section>
+    <button class="linkbtn hidden" id="showCreate" type="button">Kendi salonumu kurmak istiyorum</button>
+    <p class="hint center" id="netMsg">Kurucu sana bir davet bağlantısı ya da 4 harfli bir kod gönderir.</p>
+  </div>
+</main>
+
+<!-- Salon -->
+<main id="room" class="screen hidden">
+  <div class="topbar">
+    <button class="codechip" id="codeChip" type="button" aria-label="Davet et"><span class="mini" id="miniCode"></span><span class="cct">Davet et</span></button>
+    <div id="actLine"></div>
+    <button class="icon" id="menuBtn" type="button" aria-label="Menü">☰</button>
+  </div>
+  <div id="main">
+    <div id="stageCol">
+      <div id="stage">
+        <div id="lounge">
+          <div class="lounge-head"><h2 id="loungeTitle">Ne yapalım?</h2><p id="loungeSub"></p></div>
+          <div class="actgrid" id="actGrid"></div>
+          <p class="loungenote" id="loungeNote"></p>
+          <div id="loungeTiles"></div>
+        </div>
+        <div id="actRoot"></div>
+        <div id="reactLayer"></div>
+      </div>
+    </div>
+    <aside id="side">
+      <div id="strip"></div>
+      <section id="chat" aria-label="Sohbet">
+        <div class="chathead">💬 Sohbet <button class="x" id="chatClose" type="button" aria-label="Kapat">✕</button></div>
+        <div id="msgs"></div>
+        <div class="chatin">
+          <input type="text" id="chatIn" maxlength="500" placeholder="Mesaj yaz ya da link yapıştır" autocomplete="off">
+          <button class="btn sun" id="chatSend" type="button" aria-label="Gönder">➤</button>
+        </div>
+      </section>
+    </aside>
+  </div>
+  <div class="ctrlbar">
+    <button class="cbtn off" id="micBtn" type="button"><span class="ci">🎤</span><span class="cl">Mikrofon</span></button>
+    <button class="cbtn off" id="camBtn" type="button"><span class="ci">📷</span><span class="cl">Kamera</span></button>
+    <div id="actCtrl"></div>
+    <button class="cbtn" id="reactBtn" type="button"><span class="ci">😀</span><span class="cl">Tepki</span></button>
+    <button class="cbtn chatonly" id="chatBtn" type="button"><span class="ci">💬</span><span class="cl">Sohbet</span><span class="badge hidden" id="unread"></span></button>
+    <div id="reactPop" class="hidden"></div>
+  </div>
+</main>
+
+<!-- Davet -->
+<div class="overlay hidden" id="inviteM">
+  <div class="modal">
+    <h2>Arkadaşlarını çağır</h2>
+    <div class="codebig" id="bigCode"></div>
+    <p>Bağlantıyı WhatsApp'tan gönder. Tıklayan sadece adını yazar.</p>
+    <div class="invite"><input type="text" id="inviteLink" readonly aria-label="Davet bağlantısı"><button class="btn soft" id="copyBtn" type="button">Kopyala</button></div>
+    <div class="mbtns">
+      <button class="btn sun hidden" id="nativeShare" type="button">📤 Bağlantıyı paylaş</button>
+      <button class="btn soft" data-close type="button">Tamam</button>
+    </div>
+  </div>
+</div>
+
+<!-- Menü -->
+<div class="overlay hidden" id="menuM">
+  <div class="modal">
+    <h2>Menü</h2>
+    <div class="mbtns">
+      <div class="mbtns" id="mGame" style="margin-top:0"></div>
+      <button class="btn soft hidden" id="mLounge" type="button">🛋️ Herkesi salona döndür</button>
+      <button class="btn soft" id="mInvite" type="button">🔗 Davet et</button>
+      <button class="btn soft" id="mTheme" type="button"></button>
+      <button class="btn bad" id="mLeave" type="button">🚪 Salondan çık</button>
+      <button class="btn soft" data-close type="button">Kapat</button>
+    </div>
+  </div>
+</div>
+
+<!-- Etkinlik ayarları (kurucu) -->
+<div class="overlay hidden" id="setupM">
+  <div class="modal wide">
+    <h2 id="setupTitle"></h2>
+    <div id="setupBody"></div>
+    <div class="mbtns">
+      <button class="btn sun big" id="setupGo" type="button">Başlat</button>
+      <button class="btn soft" data-close type="button">Vazgeç</button>
+    </div>
+  </div>
+</div>
+
+<div id="voiceAudio" style="display:none"></div>
+<div id="banner"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="conn" class="hidden">Bağlantı koptu, yeniden bağlanıyor…</div>
+
+<script src="core.js"></script>
+<script src="games/w2g.js"></script>
+<script src="games/tersine.js"></script>
+<script src="games/yapboz.js"></script>
+<script src="games/sinema.js"></script>
+<script>App.boot()</script>
+</body>
+</html>

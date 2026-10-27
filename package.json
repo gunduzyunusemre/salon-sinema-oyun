@@ -1,0 +1,16 @@
+{
+  "name": "salon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Arkadaşlarla tek odada: sekme paylaşıp birlikte izle, Tersine oyna, yapboz yarıştır. Sesli, kameralı, sohbetli.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "internet": "node server.js --internet"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "qrcode-terminal": "0.12.0",
+    "ws": "8.18.0"
+  }
+}
